@@ -53,6 +53,7 @@ ofstream fout;
 ifstream fin;
 
 int count;
+boolean userad = false;
 string filename = "~test.txt";
 double filtered_count = 0, total_count = 0;
 
@@ -106,6 +107,54 @@ long long findGCD(long long a, long b) {
 	return findGCD(b, a % b);
 }
 
+//Function to find and print distinct prime factors
+long long rad(long long n,boolean prt) {
+
+	long long rad = 1;
+	vector <long> distinct = {};
+	distinct.clear();
+
+
+	if (n <= 1) {
+		cout << "No prime factors for " << n << endl;
+		return 0;
+	}
+
+	// 1. Handle the factor 2 separately for efficiency
+	if (n % 2 == 0) {
+		//		cout << 2 << " ";
+		rad = rad * 2;
+		distinct.push_back(2);
+
+		while (n % 2 == 0) n /= 2;
+	}
+
+	// 2. Check for odd factors starting from 3 up to sqrt(n)
+	for (long long i = 3; i <= sqrt(n); i += 2) {
+		if (n % i == 0) {
+			//			cout << i << " ";
+			rad = rad * i;
+			distinct.push_back(i);
+
+			// Divide out all occurrences of this prime factor
+			while (n % i == 0) n /= i;
+		}
+	}
+
+	// 3. If n is still > 1, the remaining n is a prime factor
+	if (n > 2) {
+		//		cout << n;
+		rad = rad * n;
+		distinct.push_back(n);
+	}
+	if (prt) {
+		for (size_t i = 0; i < distinct.size(); ++i) {
+			std::cout << distinct[i] << " ";
+		}
+	}
+	return rad;
+}
+
 // Separate numerator and denominator
 long long* reduce(long long num, long long den)
 {
@@ -144,6 +193,7 @@ vector<long> primes(int x1, int y1,long long p)
 	vector <long> result = {};
 
 	bool trace = false;
+	bool pts = false;
 	bool turn = false;
 	int loop = 0;
 
@@ -153,6 +203,7 @@ vector<long> primes(int x1, int y1,long long p)
 
 	if (trace) std::cout << "x1= " << x1 << endl;
 	if (trace) std::cout << "y1= " << y1 << endl;
+	if (pts) cout << "(" << x1 << "," << y1 << ")" << endl;
 
 	coords.clear();
 	coords.push_back(x1);
@@ -171,6 +222,8 @@ vector<long> primes(int x1, int y1,long long p)
 	y2 = (long long)(g * (x1 - x2) - y1) % p;
 	if (y2 < 0) y2 = p + y2;
 	if (trace) std::cout << "y2= " << y2 << endl;
+	if (pts) cout << "(" << x2 << "," << y2 << ")" << endl;
+
 	coords.clear();
 	coords.push_back(x2);
 	coords.push_back(y2);
@@ -205,6 +258,8 @@ vector<long> primes(int x1, int y1,long long p)
 		y3 = (long long)(g * (x1 - x3) - y1) % p;
 		if (y3 < 0) y3 = p + y3;
 		if (trace) std::cout << "y" << i + 2 << " = " << y3 << endl;
+		if (pts) cout << "(" << x3 << "," << y3 << ")" << endl;
+
 
 		//  Test for even symmetric group
 		if (!turn
@@ -470,7 +525,7 @@ vector<long> group(bool pts, int x1, int y1, long long p)
 }
 
 // Find Goldbach prime pair
-long long goldbach(long long e)
+long long goldbach(long long e,bool all)
 {
 	bool trace = false;
 	double l2;
@@ -495,8 +550,9 @@ long long goldbach(long long e)
 		l2 = pow(g.at(1), 2);
 		if (trace)
 			std::cout << "Group p: " << p << " : " << symmetric1 << " - " << us << " < " << l2 << endl;
+
 		// Conjectur 3 test 
-		if (symmetric1 && us < l2)
+		if (symmetric1 && (p == 3 || us < l2))
 		{
 			if (is_prime(p) == false)
 			{
@@ -518,12 +574,32 @@ long long goldbach(long long e)
 			{
 				if (is_prime(e - p))
 				{
-					if (fout.is_open())
-						fout << "{" << e << " , {" << p << "," << e - p << "} , {" << symmetric1 << "," << symmetric2 << "}}" << endl;
-					else if (toupper(filename[0]) == 'C')
-						cout << "{" << e << " , {" << p << "," << e - p << "} , {" << symmetric1 << "," << symmetric2 << "}}" << endl;
-					rtn = e;
-					break;
+					if (userad) {
+						if (findGCD(e, p) > 1 || findGCD(e, e - p) > 1)
+						{
+							cout << "{" << e << "," << p << "}: " << findGCD(e, p) << endl;
+							cout << "{" << e << "," << e - p << "}: " << findGCD(e, e - p) << endl;
+							continue;
+						}
+						long long prad = rad(p * (e - p) * e, false);
+						if (fout.is_open())
+							fout << "{" << e << " , {" << p << "," << e - p << "," << prad << "} , {" << symmetric1 << "," << symmetric2 << "}}" << endl;
+						else if (e > prad && toupper(filename[0]) == 'C')
+							cout << "{" << e << " , {" << p << "," << e - p << "," << prad << "} , {" << symmetric1 << "," << symmetric2 << "}}" << endl;
+						rtn = e;
+						if (!all)
+							break;
+					}
+					else 
+					{
+						if (fout.is_open())
+							fout << "{" << e << " , {" << p << "," << e - p << "} , {" << symmetric1 << "," << symmetric2 << "}}" << endl;
+						else if (toupper(filename[0]) == 'C')
+							cout << "{" << e << " , {" << p << "," << e - p << "} , {" << symmetric1 << "," << symmetric2 << "}}" << endl;
+						rtn = e;
+						if (!all)
+							break;
+					}
 				}
 				else
 				{
@@ -591,27 +667,34 @@ string username()
 	else return "";
 }
 
+#include <iostream>
+#include <cmath>
+#include <vector>
+
+using namespace std;
+
 int main()
 {
 	int run = 1;
+	userad = false;
 
 	while (run)
 	{
 		string  report = "1";
 		int x1 = 1, y1 = 1, even = 0, odd = 0;
-		bool pts = false;
+		bool pts = false, all = false;
 		double both = 0,  hit = 0, thit = 0, chit = 0, tchit = 0, miss = 0, l2;
 		long long us = 0, count = 0, rtn, start = 0, end = 0, lower = 0, upper = 0, p;
 		string base = "C:\\Users\\" + username() + "\\Desktop\\";
 
 		vector <long> g;
 
-		std::cout << "\nSelect option (1 = Primes, 2 = Goldbach solution, 3 = Random sample, 4 = Twins/Cousins): ";
+		std::cout << "\nSelect option (1 = Primes, 2 = Goldbach solution, 3 = Random sample, 4 = Twins/Cousins, 5 = abc): ";
 		std::cin >> report;
 		if (report == "") report = "1";
 
 		std::cout << "\nEnter a fully qualified file name or " << endl;
-		std::cout << "'c' for console or 's' for summary only" << endl;
+		std::cout << "'c' for console or 'a' for all or 's' for summary only" << endl;
 		std::cout << "'p' for points or 'f' for filename = 'G-start-end.dat'" << endl;
 		std::cout << "  [e.g., c:\\\\Users\\\\username\\\\Desktop\\\\filename.txt]" << endl;
 		std::cout << "  [  or, ~filename creates filename on the Desktop]" << endl << endl << ":";
@@ -621,8 +704,14 @@ int main()
 		if (toupper(filename[0]) == 'P')
 		{
 			pts = true;
-			filename[0] == 'C';
+			filename[0] = 'C';
 			cout << "Points output." << endl;
+		}
+
+		if (toupper(filename[0]) == 'A')
+		{
+			all = true;
+			filename[0] = 'C';
 		}
 
 		if (toupper(filename[0]) == 'C')
@@ -665,8 +754,12 @@ int main()
 			}
 
 			if (found || toupper(filename[0]) == 'F')
+			{
+				all = true;
 				cout << "Output to file: " << filename << endl;
+			}
 
+			/*
 			std::cout << "\nEnter starting point x1 and y1: ";
 			std::cin >> x1;
 			std::cin >> y1;
@@ -676,6 +769,7 @@ int main()
 				std::cin.get();
 				return 0;
 			}
+			*/
 		}
 		std::cout << endl;
 
@@ -764,7 +858,7 @@ int main()
 					if (is_prime(p) && l2 <= us)
 					{
 						miss++;
-						if (toupper(filename[0]) != 'S')
+						if (toupper(filename[0]) == 'S')
 						{
 							if (fout.is_open())
 								fout << "Missed prime = " << p << endl;
@@ -815,11 +909,22 @@ int main()
 			{
 				std::cout << e << "\r";
 
-				if (e != goldbach(e))
+				if (e != goldbach(e,all))
 					std::cout << "***** Error ***** - No solution: " << e << endl;
 			}
 			std::cout << "Filter efficiency = " << (int)(100 * filtered_count / total_count) << "%" << endl << endl;
 
+		}
+		else if (report == "5") // abc
+		{
+			if (start % 2 == 1) start++;
+
+			for (long long e = start; e <= end; e += 2)
+			{
+				std::cout << e << ": ";
+				rad(e,true);
+				std::cout << endl;
+			}
 		}
 		else // Random sample in range
 		{
@@ -831,7 +936,7 @@ int main()
 
 				std::cout << e << "\r";
 
-				if (e != goldbach(e))
+				if (e != goldbach(e,all))
 				{
 					std::cout << "***** Error ***** - No solution: " << e << endl;
 					break;
